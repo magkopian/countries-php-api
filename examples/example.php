@@ -9,16 +9,20 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use JeroenDesloovere\Countries\Countries;
+use JeroenDesloovere\Countries;
+
+// instantiate a Countries object
+$countries = new Countries\Countries(new Countries\Cache('cache'));
 
 // get items
-$items = Countries::getAll();
+$items = $countries->getAll();
 
 // dump items
 print_r($items);
 
 // get languages for country
-$items = Countries::getLanguages('BE');
+$items = $countries->getLanguages('BE');
 
 // dump items
 print_r($items);
+

@@ -1,6 +1,4 @@
-<?php
-
-namespace JeroenDesloovere\Countries;
+<?php namespace JeroenDesloovere\Countries;
 
 /**
  * Countries
@@ -18,12 +16,27 @@ class Countries
     const API_URL = 'http://www.geonames.org/countryInfoJSON';
 
     /**
+     * cache
+     */
+    private $cache;    
+    
+    /**
+     * __construct
+     *
+     * @param Cache[optional] $cache
+     */
+    public function __construct(Cache $cache = null)
+    {
+        $this->cache = $cache;
+    }
+
+    /**
      * Do call
      *
      * @param  array[optional] $params
      * @return array
      */
-    protected static function doCall($params = array())
+    protected function doCall($params = array())
     {
         // init results
         $results = array();
@@ -31,20 +44,34 @@ class Countries
         // init default
         if (count($params) == 0) $params = array('lang' => 'nl');
 
-        // init curl
-        $curl = curl_init();
-
-        // set options
-        curl_setopt($curl, CURLOPT_URL, self::API_URL . '?' . http_build_query($params));
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+        // check cache if available
+        $response = null;
+        if ($this->cache !== null) {
+            $response = $this->cache->get($params);
+        }
         
-        // execute
-        $response = curl_exec($curl);
+        if ($response === null) {
 
-        // close
-        curl_close($curl);
+            // init curl
+            $curl = curl_init();
 
+            // set options
+            curl_setopt($curl, CURLOPT_URL, self::API_URL . '?' . http_build_query($params));
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+            
+            // execute
+            $response = curl_exec($curl);
+
+            // close
+            curl_close($curl);
+            
+            if ($this->cache !== null) {
+                $this->cache->set($response, $params);
+            }
+        
+        }
+        
         // define items
         $items = json_decode($response, true);
 
@@ -64,7 +91,7 @@ class Countries
      * @param  string[optional] $language
      * @return countries        Returns countryCode => countryName
      */
-    public static function getAll($language = null)
+    public function getAll($language = null)
     {
         // init results
         $results = array();
@@ -73,7 +100,7 @@ class Countries
         $parameters = (empty($language)) ? array() : array('lang' => (string) $language);
 
         // get items
-        $items = self::doCall($parameters);
+        $items = $this->doCall($parameters);
 
         // loop items
         foreach ($items as $countryCode => $item) {
@@ -91,13 +118,13 @@ class Countries
      * @param  string $countryCode The country code where you want to get the languages for.
      * @return array
      */
-    public static function getLanguages($countryCode = null)
+    public function getLanguages($countryCode = null)
     {
         // redefine countryCode
         $countryCode = (string) $countryCode;
 
         // get items
-        $items = self::doCall();
+        $items = $this->doCall();
 
         // error checking
         if (!isset($items[$countryCode])) {
@@ -109,9 +136,3 @@ class Countries
     }
 }
 
-/**
- * Countries Exception
- *
- * @author Jeroen Desloovere <info@jeroendesloovere.be>
- */
-class CountriesException extends \Exception {}
