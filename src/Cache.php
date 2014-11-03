@@ -9,6 +9,7 @@ class Cache
 {
     private $dir;
     private $id = '26b39d1efb75ff1b36ed05a714bf156d';
+    private $expirationTime = 86400; // 24 hours
     
     /**
      * __construct
@@ -17,8 +18,12 @@ class Cache
      * @param string[optional] $id
      * @throws CountriesException
      */
-    public function __construct($dir, $id = null)
+    public function __construct($dir, $expirationTime = null, $id = null)
     {
+        if ($expirationTime !== null) {
+            $this->expirationTime = $expirationTime;
+        }
+        
         if ($id !== null) {
             $this->id = $id;
         }
@@ -60,6 +65,11 @@ class Cache
             return null;
         }
         
+        $items = json_decode($response, true);
+        if ($items['expires'] < time()) {
+            return null;
+        }
+        
         return $response;
     }
     
@@ -72,6 +82,10 @@ class Cache
      */
     public function set($response, $params = array())
     {
+        $items = json_decode($response, true);
+        $items['expires'] = time() + $this->expirationTime;
+        $response = json_encode($items);
+        
         if (file_put_contents($this->getFilename($params), $response) === false) {
            throw new CountriesException('Unable to write to cache');
         }
